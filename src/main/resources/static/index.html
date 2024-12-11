@@ -3,99 +3,110 @@
 <head>
     <title>Create Chat Room</title>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-    <script>
-        let siteKey = '';
-        
-        // Fetch site key when page loads
-        fetch('/api/chat/captcha-site-key')
-            .then(response => response.text())
-            .then(key => {
-                siteKey = key;
-                const captchaDiv = document.querySelector('.g-recaptcha');
-                captchaDiv.setAttribute('data-sitekey', key);
-            });
-
-        // function createRoom(event) {
-        //     event.preventDefault();
-        //     const nickname = document.getElementById('nickname').value;
-        //     const captchaResponse = grecaptcha.getResponse();
-
-        //     if (!captchaResponse) {
-        //         alert('Please complete the CAPTCHA');
-        //         return;
-        //     }
-
-        //     const formData = new URLSearchParams();
-        //     formData.append('nickname', nickname);
-        //     formData.append('g-recaptcha-response', captchaResponse);
-
-        //     fetch('/api/chat/room', {
-        //         method: 'POST',
-        //         body: formData
-        //     })
-        //     .then(response => response.json())
-        //     .then(data => {
-        //         console.log('Room created:', data);
-        //         // Here you'll handle the room creation success
-        //         alert(`Room created! Share this link: ${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`);
-        //     })
-        //     .catch(error => {
-        //         console.error('Error:', error);
-        //         alert('Failed to create room');
-        //     });
-        // }
-
-
-        function createRoom(event) {
-    event.preventDefault();
-    const nickname = document.getElementById('nickname').value;
-    const captchaResponse = grecaptcha.getResponse();
-
-    if (!captchaResponse) {
-        alert('Please complete the CAPTCHA');
-        return;
-    }
-
-    const formData = new URLSearchParams();
-    formData.append('nickname', nickname);
-    formData.append('g-recaptcha-response', captchaResponse);
-
-    fetch('/api/chat/room', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.text().then(text => {
-                throw new Error(text || 'Failed to create room');
-            });
+    <style>
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
         }
-        return response.json();
-    })
-    .then(data => {
-        if (data.id && data.oneTimeToken) {
-            const chatLink = `${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`;
-            alert(`Room created! Share this link: ${chatLink}`);
-        } else {
-            throw new Error('Invalid room data received');
+        .form-group {
+            margin-bottom: 20px;
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert(error.message);
-    });
-}
-    </script>
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .g-recaptcha {
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
-    <h2>Create New Chat Room</h2>
-    <form onsubmit="createRoom(event)">
-        <input type="text" id="nickname" placeholder="Your nickname" required>
-        <div class="g-recaptcha" data-callback="enableSubmit"></div>
-        <button type="submit">Create Room</button>
-    </form>
+    <div class="container">
+        <h2>Create New Chat Room</h2>
+        <form onsubmit="createRoom(event)">
+            <div class="form-group">
+                <input type="text" id="nickname" placeholder="Your nickname" required>
+            </div>
+            <div class="form-group">
+                <div id="recaptcha-container"></div>
+            </div>
+            <button type="submit">Create Room</button>
+        </form>
+    </div>
+
+    <script>
+        // Wait for the page to load
+        window.onload = function() {
+            // Fetch the site key and initialize reCAPTCHA
+            fetch('/api/chat/captcha-site-key')
+                .then(response => response.text())
+                .then(siteKey => {
+                    // Create reCAPTCHA element
+                    grecaptcha.render('recaptcha-container', {
+                        'sitekey': siteKey
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading reCAPTCHA:', error);
+                });
+        };
+
+        function createRoom(event) {
+            event.preventDefault();
+            const nickname = document.getElementById('nickname').value;
+            const captchaResponse = grecaptcha.getResponse();
+
+            if (!captchaResponse) {
+                alert('Please complete the CAPTCHA');
+                return;
+            }
+
+            const formData = new URLSearchParams();
+            formData.append('nickname', nickname);
+            formData.append('g-recaptcha-response', captchaResponse);
+
+            fetch('/api/chat/room', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(text || 'Failed to create room');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.id && data.oneTimeToken) {
+                    const chatLink = `${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`;
+                    alert(`Room created! Share this link: ${chatLink}`);
+                    // Redirect the creator to the chat room
+                    window.location.href = `/chat.html?room=${data.id}&user=${encodeURIComponent(nickname)}`;
+                } else {
+                    throw new Error('Invalid room data received');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message);
+            });
+        }
+    </script>
 </body>
 </html>
