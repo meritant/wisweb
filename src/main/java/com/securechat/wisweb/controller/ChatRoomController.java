@@ -3,7 +3,10 @@ package com.securechat.wisweb.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.securechat.wisweb.config.RecaptchaConfig;
 import com.securechat.wisweb.model.ChatRoom;
+import com.securechat.wisweb.service.CaptchaService;
 import com.securechat.wisweb.service.ChatRoomService;
 
 @RestController
@@ -12,10 +15,27 @@ public class ChatRoomController {
 
     @Autowired
     private ChatRoomService chatRoomService;
+    
+    @Autowired
+    private CaptchaService captchaService;
+    
+    @Autowired
+    private RecaptchaConfig recaptchaConfig;
+    
+    @GetMapping("/captcha-site-key")
+    public String getCaptchaSiteKey() {
+        return recaptchaConfig.getSiteKey();
+    }
 
     @PostMapping("/room")
-    public ResponseEntity<ChatRoom> createRoom(@RequestParam String nickname) {
-        // Note: CAPTCHA validation will be added here later
+    public ResponseEntity<?> createRoom(
+            @RequestParam String nickname,
+            @RequestParam("g-recaptcha-response") String captchaResponse) {
+        
+        if (!captchaService.validateCaptcha(captchaResponse)) {
+            return ResponseEntity.badRequest().body("CAPTCHA validation failed");
+        }
+
         ChatRoom room = chatRoomService.createRoom(nickname);
         return ResponseEntity.ok(room);
     }

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Chat Room</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script>
+        let siteKey = '';
+        
+        // Fetch site key when page loads
+        fetch('/api/chat/captcha-site-key')
+            .then(response => response.text())
+            .then(key => {
+                siteKey = key;
+                const captchaDiv = document.querySelector('.g-recaptcha');
+                captchaDiv.setAttribute('data-sitekey', key);
+            });
+
+        function createRoom(event) {
+            event.preventDefault();
+            const nickname = document.getElementById('nickname').value;
+            const captchaResponse = grecaptcha.getResponse();
+
+            if (!captchaResponse) {
+                alert('Please complete the CAPTCHA');
+                return;
+            }
+
+            const formData = new URLSearchParams();
+            formData.append('nickname', nickname);
+            formData.append('g-recaptcha-response', captchaResponse);
+
+            fetch('/api/chat/room', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Room created:', data);
+                // Here you'll handle the room creation success
+                alert(`Room created! Share this link: ${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to create room');
+            });
+        }
+    </script>
+</head>
+<body>
+    <h2>Create New Chat Room</h2>
+    <form onsubmit="createRoom(event)">
+        <input type="text" id="nickname" placeholder="Your nickname" required>
+        <div class="g-recaptcha" data-callback="enableSubmit"></div>
+        <button type="submit">Create Room</button>
+    </form>
+</body>
+</html>
