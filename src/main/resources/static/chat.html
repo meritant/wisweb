@@ -6,6 +6,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
     <style>
+        .typing-indicator {
+        padding: 5px;
+        color: #666;
+        font-style: italic;
+        min-height: 1.5em;
+        }
         .chat-container {
             max-width: 800px;
             margin: 30px auto;
@@ -61,98 +67,122 @@
 
     <script>
         let stompClient = null;
-        const roomId = new URLSearchParams(window.location.search).get('room');
-        const username = new URLSearchParams(window.location.search).get('user');
-        let typingTimeout = null;
+const roomId = new URLSearchParams(window.location.search).get('room');
+const username = new URLSearchParams(window.location.search).get('user');
+let typingTimeout = null;
+let isTyping = false;
 
-        function connect() {
-            const socket = new SockJS('/ws');
-            stompClient = Stomp.over(socket);
-            stompClient.connect({}, function(frame) {
-                console.log('Connected: ' + frame);
-                
-                // Subscribe to room-specific channel
-                stompClient.subscribe(`/topic/room.${roomId}`, function(message) {
-                    showMessage(JSON.parse(message.body));
-                });
-
-                // Send join message
-                sendMessage('', 'JOIN');
-            });
-        }
-
-        function showMessage(message) {
-            const messageArea = document.getElementById('messageArea');
-            const messageDiv = document.createElement('div');
-
-            switch(message.type) {
-                case 'JOIN':
-                    messageDiv.className = 'system-message';
-                    messageDiv.textContent = `${message.sender} joined the chat`;
-                    break;
-                case 'LEAVE':
-                    messageDiv.className = 'system-message';
-                    messageDiv.textContent = `${message.sender} left the chat`;
-                    break;
-                case 'TYPING':
-                    document.getElementById('typingIndicator').textContent = 
-                        message.sender === username ? '' : `${message.sender} is typing...`;
-                    return;
-                case 'CHAT':
-                    messageDiv.className = `message ${message.sender === username ? 'sent' : 'received'}`;
-                    messageDiv.innerHTML = `<strong>${message.sender}:</strong> ${message.content}`;
-                    break;
-            }
-
-            messageArea.appendChild(messageDiv);
-            messageArea.scrollTop = messageArea.scrollHeight;
-        }
-
-        function sendMessage(content, type = 'CHAT') {
-            if (stompClient) {
-                const chatMessage = {
-                    roomId: roomId,
-                    sender: username,
-                    content: content,
-                    type: type
-                };
-                stompClient.send("/app/chat.message", {}, JSON.stringify(chatMessage));
-            }
-        }
-
-        function sendTypingIndicator() {
-            if (typingTimeout) {
-                clearTimeout(typingTimeout);
-            }
-            sendMessage('', 'TYPING');
-            typingTimeout = setTimeout(() => {
-                document.getElementById('typingIndicator').textContent = '';
-            }, 1000);
-        }
-
-        document.getElementById('messageForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const messageInput = document.getElementById('message');
-            const messageContent = messageInput.value.trim();
-            
-            if (messageContent) {
-                sendMessage(messageContent);
-                messageInput.value = '';
-            }
+function connect() {
+    const socket = new SockJS('/ws');
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, function(frame) {
+        console.log('Connected: ' + frame);
+        
+        // Subscribe to room-specific channel
+        stompClient.subscribe(`/topic/room.${roomId}`, function(message) {
+            showMessage(JSON.parse(message.body));
         });
 
-        document.getElementById('message').addEventListener('input', sendTypingIndicator);
+        // Send join message
+        sendMessage('', 'JOIN');
+    });
+}
 
-        // Handle page unload
-        window.onbeforeunload = function() {
-            if (stompClient) {
-                sendMessage('', 'LEAVE');
-                stompClient.disconnect();
+function showMessage(message) {
+    const messageArea = document.getElementById('messageArea');
+    const messageDiv = document.createElement('div');
+
+    switch(message.type) {
+        case 'JOIN':
+            messageDiv.className = 'system-message';
+            messageDiv.textContent = `${message.sender} joined the chat`;
+            break;
+        case 'LEAVE':
+            messageDiv.className = 'system-message';
+            messageDiv.textContent = `${message.sender} left the chat`;
+            break;
+        case 'TYPING':
+            const typingDiv = document.getElementById('typingIndicator');
+            if (message.sender !== username) {
+                if (message.content === "typing") {
+                    typingDiv.textContent = `${message.sender} is typing...`;
+                } else {
+                    typingDiv.textContent = '';
+                }
             }
-        };
+            return; // Don't append typing messages to message area
+        case 'CHAT':
+            messageDiv.className = `message ${message.sender === username ? 'sent' : 'received'}`;
+            messageDiv.innerHTML = `<strong>${message.sender}:</strong> ${message.content}`;
+            break;
+    }
 
-        // Connect when page loads
-        connect();
+    messageArea.appendChild(messageDiv);
+    messageArea.scrollTop = messageArea.scrollHeight;
+}
+
+function sendMessage(content, type = 'CHAT') {
+    if (stompClient) {
+        const chatMessage = {
+            roomId: roomId,
+            sender: username,
+            content: content,
+            type: type
+        };
+        stompClient.send("/app/chat.message", {}, JSON.stringify(chatMessage));
+    }
+}
+
+function sendTypingStatus(typing) {
+    if (stompClient && typing !== isTyping) {
+        isTyping = typing;
+        stompClient.send("/app/chat.typing", {}, JSON.stringify({
+            roomId: roomId,
+            sender: username,
+            content: typing ? "typing" : "stopped",
+            type: 'TYPING'
+        }));
+    }
+}
+
+// Wait for DOM to load before adding event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Message form submission
+    document.getElementById('messageForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const messageInput = document.getElementById('message');
+        const messageContent = messageInput.value.trim();
+        
+        if (messageContent) {
+            sendMessage(messageContent);
+            messageInput.value = '';
+        }
+    });
+
+    // Typing indicator
+    document.getElementById('message').addEventListener('input', function() {
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+        }
+        
+        sendTypingStatus(true);
+        
+        typingTimeout = setTimeout(() => {
+            sendTypingStatus(false);
+        }, 1000);
+    });
+});
+
+// Handle page unload
+window.onbeforeunload = function() {
+    if (stompClient) {
+        sendMessage('', 'LEAVE');
+        stompClient.disconnect();
+    }
+};
+
+// Connect when page loads
+connect();
     </script>
 </body>
 </html>
