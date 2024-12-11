@@ -15,35 +15,79 @@
                 captchaDiv.setAttribute('data-sitekey', key);
             });
 
+        // function createRoom(event) {
+        //     event.preventDefault();
+        //     const nickname = document.getElementById('nickname').value;
+        //     const captchaResponse = grecaptcha.getResponse();
+
+        //     if (!captchaResponse) {
+        //         alert('Please complete the CAPTCHA');
+        //         return;
+        //     }
+
+        //     const formData = new URLSearchParams();
+        //     formData.append('nickname', nickname);
+        //     formData.append('g-recaptcha-response', captchaResponse);
+
+        //     fetch('/api/chat/room', {
+        //         method: 'POST',
+        //         body: formData
+        //     })
+        //     .then(response => response.json())
+        //     .then(data => {
+        //         console.log('Room created:', data);
+        //         // Here you'll handle the room creation success
+        //         alert(`Room created! Share this link: ${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`);
+        //     })
+        //     .catch(error => {
+        //         console.error('Error:', error);
+        //         alert('Failed to create room');
+        //     });
+        // }
+
+
         function createRoom(event) {
-            event.preventDefault();
-            const nickname = document.getElementById('nickname').value;
-            const captchaResponse = grecaptcha.getResponse();
+    event.preventDefault();
+    const nickname = document.getElementById('nickname').value;
+    const captchaResponse = grecaptcha.getResponse();
 
-            if (!captchaResponse) {
-                alert('Please complete the CAPTCHA');
-                return;
-            }
+    if (!captchaResponse) {
+        alert('Please complete the CAPTCHA');
+        return;
+    }
 
-            const formData = new URLSearchParams();
-            formData.append('nickname', nickname);
-            formData.append('g-recaptcha-response', captchaResponse);
+    const formData = new URLSearchParams();
+    formData.append('nickname', nickname);
+    formData.append('g-recaptcha-response', captchaResponse);
 
-            fetch('/api/chat/room', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Room created:', data);
-                // Here you'll handle the room creation success
-                alert(`Room created! Share this link: ${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to create room');
+    fetch('/api/chat/room', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(text || 'Failed to create room');
             });
         }
+        return response.json();
+    })
+    .then(data => {
+        if (data.id && data.oneTimeToken) {
+            const chatLink = `${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`;
+            alert(`Room created! Share this link: ${chatLink}`);
+        } else {
+            throw new Error('Invalid room data received');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert(error.message);
+    });
+}
     </script>
 </head>
 <body>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure Chat</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        .chat-container {
+            max-width: 800px;
+            margin: 30px auto;
+        }
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .message.sent {
+            background-color: #d4edda;
+            margin-left: 20%;
+        }
+        .message.received {
+            background-color: #f8f9fa;
+            margin-right: 20%;
+        }
+        .typing-indicator {
+            font-style: italic;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        .system-message {
+            color: #6c757d;
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container chat-container">
+        <h2 class="text-center mb-4">Secure Chat</h2>
+        <div class="chat-messages" id="messageArea">
+            <!-- Messages will appear here -->
+        </div>
+        <div class="typing-indicator" id="typingIndicator"></div>
+        <form id="messageForm" class="row g-3">
+            <div class="col-10">
+                <input type="text" id="message" class="form-control" placeholder="Type a message...">
+            </div>
+            <div class="col-2">
+                <button type="submit" class="btn btn-primary w-100">Send</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let stompClient = null;
+        const roomId = new URLSearchParams(window.location.search).get('room');
+        const username = new URLSearchParams(window.location.search).get('user');
+        let typingTimeout = null;
+
+        function connect() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function(frame) {
+                console.log('Connected: ' + frame);
+                
+                // Subscribe to room-specific channel
+                stompClient.subscribe(`/topic/room.${roomId}`, function(message) {
+                    showMessage(JSON.parse(message.body));
+                });
+
+                // Send join message
+                sendMessage('', 'JOIN');
+            });
+        }
+
+        function showMessage(message) {
+            const messageArea = document.getElementById('messageArea');
+            const messageDiv = document.createElement('div');
+
+            switch(message.type) {
+                case 'JOIN':
+                    messageDiv.className = 'system-message';
+                    messageDiv.textContent = `${message.sender} joined the chat`;
+                    break;
+                case 'LEAVE':
+                    messageDiv.className = 'system-message';
+                    messageDiv.textContent = `${message.sender} left the chat`;
+                    break;
+                case 'TYPING':
+                    document.getElementById('typingIndicator').textContent = 
+                        message.sender === username ? '' : `${message.sender} is typing...`;
+                    return;
+                case 'CHAT':
+                    messageDiv.className = `message ${message.sender === username ? 'sent' : 'received'}`;
+                    messageDiv.innerHTML = `<strong>${message.sender}:</strong> ${message.content}`;
+                    break;
+            }
+
+            messageArea.appendChild(messageDiv);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+
+        function sendMessage(content, type = 'CHAT') {
+            if (stompClient) {
+                const chatMessage = {
+                    roomId: roomId,
+                    sender: username,
+                    content: content,
+                    type: type
+                };
+                stompClient.send("/app/chat.message", {}, JSON.stringify(chatMessage));
+            }
+        }
+
+        function sendTypingIndicator() {
+            if (typingTimeout) {
+                clearTimeout(typingTimeout);
+            }
+            sendMessage('', 'TYPING');
+            typingTimeout = setTimeout(() => {
+                document.getElementById('typingIndicator').textContent = '';
+            }, 1000);
+        }
+
+        document.getElementById('messageForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const messageInput = document.getElementById('message');
+            const messageContent = messageInput.value.trim();
+            
+            if (messageContent) {
+                sendMessage(messageContent);
+                messageInput.value = '';
+            }
+        });
+
+        document.getElementById('message').addEventListener('input', sendTypingIndicator);
+
+        // Handle page unload
+        window.onbeforeunload = function() {
+            if (stompClient) {
+                sendMessage('', 'LEAVE');
+                stompClient.disconnect();
+            }
+        };
+
+        // Connect when page loads
+        connect();
+    </script>
+</body>
+</html>

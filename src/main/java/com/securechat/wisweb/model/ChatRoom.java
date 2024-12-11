@@ -7,7 +7,7 @@ import java.util.UUID;
 @Data
 public class ChatRoom {
     private final String id;
-    private final String oneTimeToken;
+    private String oneTimeToken;
     private final LocalDateTime creationTime;
     private boolean isActive;
     private String hostNickname;

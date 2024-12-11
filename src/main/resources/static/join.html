@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Join Chat Room</title>
+    <script>
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        function validateAndJoin() {
+            const roomId = window.location.pathname.split('/').pop();
+            const token = getQueryParam('token');
+            const nickname = document.getElementById('nickname').value;
+
+            console.log('Joining room:', { roomId, token, nickname }); // Debug log
+
+            // First validate the token
+            fetch(`/api/chat/room/${roomId}/validate?token=${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => {
+                console.log('Validate response:', response); // Debug log
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(text || 'Invalid or expired link');
+                    });
+                }
+                
+                // If validation successful, try to join
+                const formData = new URLSearchParams();
+                formData.append('nickname', nickname);
+                formData.append('token', token);
+
+                return fetch(`/api/chat/room/${roomId}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+            })
+            .then(response => {
+                console.log('Join response:', response); // Debug log
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(text || 'Failed to join room');
+                    });
+                }
+                // Redirect to chat room
+                window.location.href = `/chat.html?room=${roomId}&user=${encodeURIComponent(nickname)}`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message);
+                // Don't redirect on error, let user try again
+            });
+
+            return false;
+        }
+    </script>
+</head>
+<body>
+    <h2>Join Chat Room</h2>
+    <form onsubmit="return validateAndJoin()">
+        <input type="text" id="nickname" placeholder="Your nickname" required>
+        <button type="submit">Join Chat</button>
+    </form>
+</body>
+</html>

@@ -25,17 +25,41 @@ public class CaptchaService {
         private String[] errorCodes;
     }
 
+//    public boolean validateCaptcha(String captchaResponse) {
+//        MultiValueMap<String, String> requestMap = new LinkedMultiValueMap<>();
+//        requestMap.add("secret", recaptchaConfig.getSecretKey());
+//        requestMap.add("response", captchaResponse);
+//
+//        ResponseEntity<RecaptchaResponse> response = restTemplate.postForEntity(
+//            recaptchaConfig.getVerifyUrl(),
+//            requestMap,
+//            RecaptchaResponse.class
+//        );
+//
+//        return response.getBody() != null && response.getBody().isSuccess();
+//    }
+    
+    
     public boolean validateCaptcha(String captchaResponse) {
-        MultiValueMap<String, String> requestMap = new LinkedMultiValueMap<>();
-        requestMap.add("secret", recaptchaConfig.getSecretKey());
-        requestMap.add("response", captchaResponse);
+        try {
+            MultiValueMap<String, String> requestMap = new LinkedMultiValueMap<>();
+            requestMap.add("secret", recaptchaConfig.getSecretKey());
+            requestMap.add("response", captchaResponse);
 
-        ResponseEntity<RecaptchaResponse> response = restTemplate.postForEntity(
-            recaptchaConfig.getVerifyUrl(),
-            requestMap,
-            RecaptchaResponse.class
-        );
+            System.out.println("Validating CAPTCHA with secret: " + recaptchaConfig.getSecretKey()); // Debug log
 
-        return response.getBody() != null && response.getBody().isSuccess();
+            ResponseEntity<RecaptchaResponse> response = restTemplate.postForEntity(
+                recaptchaConfig.getVerifyUrl(),
+                requestMap,
+                RecaptchaResponse.class
+            );
+
+            System.out.println("CAPTCHA response: " + response.getBody()); // Debug log
+
+            return response.getBody() != null && response.getBody().isSuccess();
+        } catch (Exception e) {
+            e.printStackTrace(); // For debugging
+            return false;
+        }
     }
 }

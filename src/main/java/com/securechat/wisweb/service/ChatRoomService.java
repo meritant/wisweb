@@ -14,12 +14,19 @@ public class ChatRoomService {
     public ChatRoom createRoom(String hostNickname) {
         ChatRoom room = new ChatRoom(hostNickname);
         chatRooms.put(room.getId(), room);
+        System.out.println("Room created - ID: " + room.getId() + ", Token: " + room.getOneTimeToken());
         return room;
     }
 
     public ChatRoom getRoom(String roomId) {
         ChatRoom room = chatRooms.get(roomId);
+        System.out.println("Getting room - ID: " + roomId + ", Found: " + (room != null));
+        if (room != null) {
+            System.out.println("Room token: " + room.getOneTimeToken());
+        }
+        
         if (room != null && isRoomExpired(room)) {
+            System.out.println("Room expired");
             chatRooms.remove(roomId);
             return null;
         }
@@ -36,8 +43,26 @@ public class ChatRoomService {
         ChatRoom room = getRoom(roomId);
         if (room != null && room.getGuestNickname() == null) {
             room.setGuestNickname(guestNickname);
+            System.out.println("User " + guestNickname + " joined room " + roomId);
             return true;
         }
+        System.out.println("Failed to join room " + roomId);
         return false;
+    }
+
+    
+    public void removeRoom(String roomId) {
+        chatRooms.remove(roomId);
+    }
+    
+    public boolean isTokenValid(String roomId, String token) {
+        ChatRoom room = getRoom(roomId);
+        System.out.println("Validating token - Room: " + roomId + ", Token: " + token);
+        if (room != null) {
+            System.out.println("Room token: " + room.getOneTimeToken());
+        }
+        return room != null && 
+               room.getOneTimeToken() != null && 
+               room.getOneTimeToken().equals(token);
     }
 }
