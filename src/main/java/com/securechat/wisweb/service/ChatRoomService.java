@@ -13,7 +13,11 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ChatRoomService {
     private final Map<String, ChatRoom> chatRooms = new ConcurrentHashMap<>();
-    private static final long ROOM_EXPIRY_MINUTES = 1;
+    private static final long ROOM_EXPIRY_MINUTES = 2;
+    
+    public static long getRoomExpiryMinutes() {
+        return ROOM_EXPIRY_MINUTES;
+    }
 
     public ChatRoom createRoom(String hostNickname) {
         ChatRoom room = new ChatRoom(hostNickname);

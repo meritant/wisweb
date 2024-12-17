@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.securechat.wisweb.service.ChatRoomService;
 
 @Data
 public class ChatRoom {
@@ -15,6 +16,7 @@ public class ChatRoom {
     private boolean isActive;
     private String hostNickname;
     private String guestNickname;
+    private final long expiryMinutes;
     
 
     public ChatRoom(String hostNickname) {
@@ -23,5 +25,7 @@ public class ChatRoom {
         this.creationTime = LocalDateTime.now();
         this.isActive = true;
         this.hostNickname = hostNickname;
+        this.expiryMinutes = ChatRoomService.getRoomExpiryMinutes();
+
     }
 }
