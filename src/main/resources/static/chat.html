@@ -44,6 +44,17 @@
             flex-direction: column-reverse;
 
         }
+
+        #timer {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: #6c757d;
+        }
+
+        #timer.warning {
+            color: #dc3545;
+            font-weight: bold;
+        }
     
         .message {
             margin-bottom: 10px;
@@ -113,6 +124,8 @@
     <div class="chat-container">
         <div class="chat-header">
             <h2 class="text-center">Secure Chat</h2>
+            <div id="timer" class="text-center text-muted"></div>
+
         </div>
         
         <div class="chat-messages" id="messageArea">
@@ -157,6 +170,41 @@
     </div>
 
     <script>
+        // Timer functionality
+        function startTimer(creationTime) {
+    const timerElement = document.getElementById('timer');
+    const expiryTime = new Date(creationTime).getTime() + (10 * 60 * 1000); // 10 minutes in milliseconds
+
+    function updateTimer() {
+        const now = new Date().getTime();
+        const timeLeft = expiryTime - now;
+
+        if (timeLeft <= 0) {
+            timerElement.textContent = 'Chat room has expired';
+            timerElement.classList.add('warning');
+            return;
+        }
+
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+
+        // Add warning class when less than 2 minutes remaining
+        if (minutes < 2) {
+            timerElement.classList.add('warning');
+        }
+
+        timerElement.textContent = `Time remaining: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    }
+
+    // Update every second
+    updateTimer();
+    const timerId = setInterval(updateTimer, 1000);
+
+    // Clean up interval on page unload
+    window.addEventListener('unload', () => clearInterval(timerId));
+}
+// Timer END
+
 // Emoji Handler
 document.addEventListener('DOMContentLoaded', function() {
     const picker = document.querySelector('emoji-picker');
@@ -192,12 +240,36 @@ const username = new URLSearchParams(window.location.search).get('user');
 let typingTimeout = null;
 let isTyping = false;
 
+// function connect() {
+//     const socket = new SockJS('/ws');
+//     stompClient = Stomp.over(socket);
+//     stompClient.connect({}, function(frame) {
+//     console.log('Connected: ' + frame);
+        
+//         // Subscribe to room-specific channel
+//         stompClient.subscribe(`/topic/room.${roomId}`, function(message) {
+//             showMessage(JSON.parse(message.body));
+//         });
+
+//         // Send join message
+//         sendMessage('', 'JOIN');
+//     });
+// }
+
+
 function connect() {
     const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
     stompClient.connect({}, function(frame) {
         console.log('Connected: ' + frame);
         
+        // Fetch room details to get creation time
+        fetch(`/api/chat/room/${roomId}`)
+            .then(response => response.json())
+            .then(room => {
+                startTimer(room.creationTime);
+            });
+
         // Subscribe to room-specific channel
         stompClient.subscribe(`/topic/room.${roomId}`, function(message) {
             showMessage(JSON.parse(message.body));
@@ -207,6 +279,7 @@ function connect() {
         sendMessage('', 'JOIN');
     });
 }
+
 
 function showMessage(message) {
     const messageContainer = document.getElementById('messageContainer');
