@@ -2,7 +2,9 @@
 <html>
 <head>
     <title>Create Chat Room</title>
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <style>
         .container {
             max-width: 500px;
@@ -93,21 +95,88 @@
                 }
                 return response.json();
             })
-            .then(data => {
-                if (data.id && data.oneTimeToken) {
-                    const chatLink = `${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`;
-                    alert(`Room created! Share this link: ${chatLink}`);
-                    // Redirect the creator to the chat room
-                    window.location.href = `/chat.html?room=${data.id}&user=${encodeURIComponent(nickname)}`;
-                } else {
-                    throw new Error('Invalid room data received');
-                }
-            })
+
+            // .then(data => {
+            //     if (data.id && data.oneTimeToken) {
+            //         const chatLink = `${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`;
+            //         alert(`Room created! Share this link: ${chatLink}`);
+            //         // Redirect the creator to the chat room
+            //         window.location.href = `/chat.html?room=${data.id}&user=${encodeURIComponent(nickname)}`;
+            //     } else {
+            //         throw new Error('Invalid room data received');
+            //     }
+            // })
+
+
+// new modal window
+
+.then(data => {
+    if (data.id && data.oneTimeToken) {
+        const chatLink = `${window.location.origin}/chat/${data.id}?token=${data.oneTimeToken}`;
+        
+        // Set the link in the input field
+        document.getElementById('shareLink').value = chatLink;
+        
+        // Setup copy button functionality
+        document.getElementById('copyButton').onclick = function() {
+            const shareLinkInput = document.getElementById('shareLink');
+            shareLinkInput.select();
+            document.execCommand('copy');
+            
+            const copyMessage = document.getElementById('copyMessage');
+            copyMessage.style.display = 'block';
+            setTimeout(() => {
+                copyMessage.style.display = 'none';
+            }, 2000);
+        };
+
+        // Store the redirect URL for later use
+        const redirectUrl = `/chat.html?room=${data.id}&user=${encodeURIComponent(nickname)}`;
+
+        // Get the modal
+        const modalElement = document.getElementById('shareLinkModal');
+        const modal = new bootstrap.Modal(modalElement);
+
+        // Add event listener for when modal is hidden
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            window.location.href = redirectUrl;
+        });
+
+        // Show the modal
+        modal.show();
+    } else {
+        throw new Error('Invalid room data received');
+    }
+})
+
+// new modal window END
+
             .catch(error => {
                 console.error('Error:', error);
                 alert(error.message);
             });
         }
     </script>
+    <div class="modal fade" id="shareLinkModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Share Chat Link</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Share this link with someone to start chatting:</p>
+                    <div class="input-group mb-3">
+                        <input type="text" id="shareLink" class="form-control" readonly>
+                        <button class="btn btn-outline-primary" type="button" id="copyButton">Copy</button>
+                    </div>
+                    <div id="copyMessage" class="text-success" style="display: none;">Link copied!</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
