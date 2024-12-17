@@ -1,4 +1,4 @@
-# WisWeb - Word Intelligent System over the Web
+# WisWeb - Word Intelligent System Over the Web
 
 A real-time web chat application built with Java Spring Boot and WebSocket that focuses on security and privacy.
 
@@ -16,7 +16,7 @@ A real-time web chat application built with Java Spring Boot and WebSocket that 
 
 ## Technologies Used
 
-- Java 21
+- Java 17
 - Spring Boot 3.2.1
 - Spring WebSocket
 - Spring Security
@@ -37,20 +37,12 @@ A real-time web chat application built with Java Spring Boot and WebSocket that 
 
 ## Setup and Installation
 
-[Installation instructions here]
+[Installation instructions to be added]
 
 ## Configuration
 
-[Configuration details here]
+[Configuration details to be added]
 
 ## API Endpoints
 
-[List of endpoints]
-
-## Contributing
-
-[Contribution guidelines]
-
-## License
-
-[License information]
+[List of endpoints to be added]
