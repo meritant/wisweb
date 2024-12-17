@@ -8,15 +8,22 @@ import org.springframework.stereotype.Controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.securechat.wisweb.model.ChatMessage;
 import com.securechat.wisweb.model.ChatMessage.MessageType;
+import com.securechat.wisweb.service.ChatRoomService;
 
 @Controller
 public class ChatController {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    
+    @Autowired
+    private ChatRoomService chatRoomService;
 
     @MessageMapping("/chat.message")
     public void sendMessage(@Payload ChatMessage chatMessage) {
+    	
+        // Check expiration before processing message
+        chatRoomService.checkAndHandleExpiration(chatMessage.getRoomId(), messagingTemplate);
         messagingTemplate.convertAndSend("/topic/room." + chatMessage.getRoomId(), chatMessage);
     }
 

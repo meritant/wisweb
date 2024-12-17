@@ -10,6 +10,6 @@ public class ChatMessage {
     private MessageType type;
 
     public enum MessageType {
-        CHAT, JOIN, LEAVE, TYPING
+        CHAT, JOIN, LEAVE, TYPING, EXPIRED
     }
 }

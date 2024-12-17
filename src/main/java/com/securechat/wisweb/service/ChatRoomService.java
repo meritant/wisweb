@@ -1,6 +1,10 @@
 package com.securechat.wisweb.service;
 
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+
+import com.securechat.wisweb.model.ChatMessage;
+import com.securechat.wisweb.model.ChatMessage.MessageType;
 import com.securechat.wisweb.model.ChatRoom;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -64,5 +68,22 @@ public class ChatRoomService {
         return room != null && 
                room.getOneTimeToken() != null && 
                room.getOneTimeToken().equals(token);
+    }
+    
+//    Expiration check
+    public void checkAndHandleExpiration(String roomId, SimpMessagingTemplate messagingTemplate) {
+        ChatRoom room = chatRooms.get(roomId);
+        if (room != null && isRoomExpired(room)) {
+            // Send expiration message to all users in the room
+            ChatMessage expirationMessage = new ChatMessage();
+            expirationMessage.setType(MessageType.EXPIRED);
+            expirationMessage.setRoomId(roomId);
+            expirationMessage.setContent("Room has expired");
+            
+            messagingTemplate.convertAndSend("/topic/room." + roomId, expirationMessage);
+            
+            // Remove the expired room
+            chatRooms.remove(roomId);
+        }
     }
 }
