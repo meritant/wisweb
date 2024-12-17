@@ -73,6 +73,15 @@
             margin: 10px 0;
             font-style: italic;
         }
+
+        .system-message.error {
+            color: #dc3545;
+            font-weight: bold;
+            padding: 10px;
+            background-color: #f8d7da;
+            border-radius: 4px;
+            margin: 10px 0;
+}
     
         .typing-indicator {
             padding: 5px;
@@ -222,6 +231,25 @@ function showMessage(message) {
                 }
             }
             return;
+            // adding expired case
+            case 'EXPIRED':
+            messageDiv.className = 'system-message error';
+            messageDiv.textContent = 'This chat room has expired. You will be redirected.';
+            messageContainer.insertBefore(messageDiv, messageContainer.firstChild);
+            
+            // Disable input
+            document.getElementById('message').disabled = true;
+            document.getElementById('emojiButton').disabled = true;
+            
+            // Disconnect and redirect after 3 seconds
+            setTimeout(() => {
+                if (stompClient) {
+                    stompClient.disconnect();
+                }
+                window.location.href = '/';
+            }, 3000);
+            return;
+            // expired case end 
         case 'CHAT':
             messageDiv.className = `message ${message.sender === username ? 'sent' : 'received'}`;
             messageDiv.innerHTML = `<strong>${message.sender}:</strong> ${message.content}`;
